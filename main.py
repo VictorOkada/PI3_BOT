@@ -1,28 +1,42 @@
 import discord
 import os
-import requests as r 
+import requests
 import json
+import re
 
 client = discord.Client()
+
+endpoint_kanji = "http://alb-fast-api-model-serving-v2-1905986998.us-east-1.elb.amazonaws.com:8000/predict/kuzushiji-mninst?url="
+endpoint_cifar10 = "http://alb-fast-api-model-serving-v2-1905986998.us-east-1.elb.amazonaws.com:8000/predict/cifar10?url="
+
+def predict(url):
+    response = requests.get(url)
+    pretty_json = json.loads(response.text)
+    return pretty_json
 
 @client.event
 async def on_ready():
     print('We have logged in as {0.user}'.format(client))
 
 @client.event
-async def on_message(message, url):
+async def on_message(message):
+
     if message.author == client.user:
         return
-    
-    endpoint = "http://alb-fast-api-model-serving-v2-1905986998.us-east-1.elb.amazonaws.com:8000/predict?url="
-    #url = "https://i0.statig.com.br/bancodeimagens/3p/mx/f2/3pmxf2ta5jp03y7ug7ci16fus.jpg"
 
-    if message.content.startswith('!pipoca' + url):
-        response = r.get(endpoint + url)
-        pretty_json = json.loads(response.text)
-        await message.channel.send(json.dumps(pretty_json, indent=2))
     
-    else:
-        await message.channel.send(content=message.attachments[0].url)
+    if message.content.startswith('$predict cifar10'):
+        m = re.search('\$predict cifar10 (.*)', message.content)
+        url = m.group(1)
+        response = predict(endpoint_cifar10 + url)
+        await message.channel.send(json.dumps(response, indent=2))
+    
+    if message.content.startswith('$predict kanji'):
+        m = re.search('\$predict kanji (.*)', message.content)
+        url = m.group(1)
+        response = predict(endpoint_kanji + url)
+        await message.channel.send(json.dumps(response, indent=2))
 
-client.run(os.getenv('TOKEN'))
+   
+token = 'OTc2MTQ4NjA1NDYxMjA5MTQ4.GJQfYV.iHL9R61roGlbzNGGeVUxNUu_EE2g59q-IZmfJw'
+client.run(token)
